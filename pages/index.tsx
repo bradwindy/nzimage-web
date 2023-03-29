@@ -1,77 +1,31 @@
-import "reflect-metadata";
-
 import Head from "next/head";
 import Image from "next/image";
 import styles from "@/styles/Home.module.css";
-import { jsonObject, jsonMember } from "typedjson";
-import axios from "axios";
-import { TypedJSON } from "typedjson";
 import React, { useEffect, useState, useRef } from "react";
-
-@jsonObject
-export class NZImageResult {
-  @jsonMember(Number)
-  public id: number;
-
-  @jsonMember(String)
-  public title: string;
-
-  @jsonMember(String)
-  public description: string;
-
-  @jsonMember(String, { name: "thumbnail_url" })
-  public thumbnailUrl?: string;
-
-  @jsonMember(String, { name: "large_thumbnail_url" })
-  public largeThumbnailUrl?: string;
-
-  @jsonMember(String, { name: "display_collection" })
-  public displayCollection?: string;
-
-  constructor(
-    id: number,
-    title: string,
-    description: string,
-    thumbnailUrl: string,
-    largeThumbnailUrl: string,
-    displayCollection: string
-  ) {
-    this.id = id;
-    this.title = title;
-    this.description = description;
-    this.thumbnailUrl = thumbnailUrl;
-    this.largeThumbnailUrl = largeThumbnailUrl;
-    this.displayCollection = displayCollection;
-  }
-}
+import { NZImageResult } from "@/models/nz-image-result";
+import { RequestManager } from "@/managers/request-manager";
 
 export default function Home() {
   const [result, setResult] = useState<NZImageResult | null>(null);
   const dataFetchedRef = useRef(false);
   const thirtySeconds = 30000;
+  const requestManager = new RequestManager();
 
-  async function fetchAllReviews() {
-    try {
-      const response = await axios("/api/nzimageresult");
-      const data = parseResponse(response.data);
-      setResult(() => data);
-    } catch (error) {
-      console.log(error);
-    }
+  function newImage() {
+    requestManager.fetchImage(setResult);
   }
 
-  function parseResponse(body: string): NZImageResult {
-    const recordsSerializer = new TypedJSON(NZImageResult);
-    // should be okay to force unwrap? Throws if error???
-    return recordsSerializer.parse(body)!;
-  }
-
+  // Triggers on every render. See: https://www.w3schools.com/react/react_useeffect.asp
   useEffect(() => {
+    // Makes sure that the code below it only runs once
     if (dataFetchedRef.current) return;
     dataFetchedRef.current = true;
 
-    setInterval(fetchAllReviews, thirtySeconds);
-    fetchAllReviews();
+    // Fetch an image and update state
+    newImage();
+
+    // Then set an interval timer to get further new images every thirty seconds
+    setInterval(newImage, thirtySeconds);
   }, []);
 
   return (
@@ -84,8 +38,13 @@ export default function Home() {
       </Head>
       <main className={styles.main}>
         <div className={styles.description}>
-          {result?.largeThumbnailUrl && (
-            <Image src={result!.largeThumbnailUrl!} alt="image" fill />
+          {result && (
+            <Image
+              className={styles.image}
+              src={result.largeThumbnailUrl}
+              alt={result.title}
+              fill
+            />
           )}
         </div>
       </main>
