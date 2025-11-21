@@ -4,36 +4,36 @@ import { jsonObject, jsonMember } from "typedjson";
 @jsonObject
 export class NZImageResult {
   @jsonMember(Number)
-  public id: number;
+  public readonly id: number;
 
   @jsonMember(String)
-  public title: string;
+  public readonly title: string;
 
   @jsonMember(String)
-  public description?: string;
+  public readonly description?: string;
 
   @jsonMember(String, { name: "thumbnail_url" })
-  public thumbnailUrl: string;
+  public readonly thumbnailUrl: string;
 
   @jsonMember(String, { name: "large_thumbnail_url" })
-  public largeThumbnailUrl: string;
+  public readonly largeThumbnailUrl: string;
 
   @jsonMember(String, { name: "display_collection" })
-  public displayCollection?: string;
+  public readonly displayCollection?: string;
 
   constructor(
     id: number,
     title: string,
-    description: string,
     thumbnailUrl: string,
     largeThumbnailUrl: string,
-    displayCollection: string
+    description?: string,
+    displayCollection?: string
   ) {
     this.id = id;
     this.title = title;
-    this.description = description;
     this.thumbnailUrl = thumbnailUrl;
     this.largeThumbnailUrl = largeThumbnailUrl;
+    this.description = description;
     this.displayCollection = displayCollection;
   }
 }
