@@ -1,6 +1,134 @@
 :root {
   --max-width: 1100px;
   --border-radius: 12px;
+
+  --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-active: var(--font-system);
+
+  /* Neutral fallbacks; overridden by [data-mode] below once the settings script/provider runs. */
+  --bg: #000;
+  --surface: rgba(0, 0, 0, 0.5);
+  --surface-blur: 8px;
+  --text: #fff;
+  --text-muted: rgba(255, 255, 255, 0.72);
+  --border: rgba(255, 255, 255, 0.15);
+  --control-bg: rgba(255, 255, 255, 0.1);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --accent: #c9d1d9;
+}
+
+[data-mode="dark"] {
+  --bg: #000;
+  --surface: rgba(0, 0, 0, 0.5);
+  --surface-blur: 8px;
+  --text: #fff;
+  --text-muted: rgba(255, 255, 255, 0.72);
+  --border: rgba(255, 255, 255, 0.15);
+  --control-bg: rgba(255, 255, 255, 0.1);
+  --overlay: rgba(0, 0, 0, 0.6);
+}
+
+[data-mode="light"] {
+  --bg: #0f0f11;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-blur: 8px;
+  --text: #111;
+  --text-muted: rgba(0, 0, 0, 0.62);
+  --border: rgba(0, 0, 0, 0.12);
+  --control-bg: rgba(0, 0, 0, 0.06);
+  --overlay: rgba(0, 0, 0, 0.5);
+}
+
+/*
+ * Tint recolors the whole translucent chrome layer (blur panel, borders, controls, both text
+ * colors and the highlight color) rather than just a single highlight swatch, so each option is
+ * a full, professionally-muted palette rather than an accent dabbed on top of the neutral one.
+ */
+[data-tint="neutral"][data-mode="dark"] {
+  --surface: rgba(0, 0, 0, 0.5);
+  --text: #fff;
+  --text-muted: rgba(255, 255, 255, 0.72);
+  --border: rgba(255, 255, 255, 0.15);
+  --control-bg: rgba(255, 255, 255, 0.1);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --accent: #c9d1d9;
+}
+[data-tint="neutral"][data-mode="light"] {
+  --surface: rgba(255, 255, 255, 0.72);
+  --text: #111;
+  --text-muted: rgba(0, 0, 0, 0.62);
+  --border: rgba(0, 0, 0, 0.12);
+  --control-bg: rgba(0, 0, 0, 0.06);
+  --overlay: rgba(0, 0, 0, 0.5);
+  --accent: #3b4048;
+}
+
+[data-tint="sepia"][data-mode="dark"] {
+  --surface: rgba(61, 46, 26, 0.55);
+  --text: #f3e6d0;
+  --text-muted: rgba(243, 230, 208, 0.7);
+  --border: rgba(201, 156, 99, 0.28);
+  --control-bg: rgba(201, 156, 99, 0.14);
+  --overlay: rgba(26, 18, 10, 0.65);
+  --accent: #cf9a5c;
+}
+[data-tint="sepia"][data-mode="light"] {
+  --surface: rgba(250, 240, 224, 0.78);
+  --text: #3a2c1a;
+  --text-muted: rgba(58, 44, 26, 0.65);
+  --border: rgba(120, 90, 50, 0.18);
+  --control-bg: rgba(120, 90, 50, 0.08);
+  --overlay: rgba(40, 30, 18, 0.45);
+  --accent: #8a5a2b;
+}
+
+[data-tint="blue"][data-mode="dark"] {
+  --surface: rgba(16, 26, 40, 0.55);
+  --text: #e7eef7;
+  --text-muted: rgba(231, 238, 247, 0.7);
+  --border: rgba(108, 150, 201, 0.25);
+  --control-bg: rgba(108, 150, 201, 0.12);
+  --overlay: rgba(6, 12, 20, 0.65);
+  --accent: #6ea8dc;
+}
+[data-tint="blue"][data-mode="light"] {
+  --surface: rgba(235, 242, 250, 0.78);
+  --text: #16232f;
+  --text-muted: rgba(22, 35, 47, 0.62);
+  --border: rgba(30, 70, 110, 0.16);
+  --control-bg: rgba(30, 70, 110, 0.07);
+  --overlay: rgba(10, 20, 32, 0.45);
+  --accent: #285a86;
+}
+
+[data-tint="orange"][data-mode="dark"] {
+  --surface: rgba(43, 26, 14, 0.55);
+  --text: #f7e8d8;
+  --text-muted: rgba(247, 232, 216, 0.7);
+  --border: rgba(214, 133, 66, 0.28);
+  --control-bg: rgba(214, 133, 66, 0.14);
+  --overlay: rgba(22, 12, 5, 0.65);
+  --accent: #e08a3c;
+}
+[data-tint="orange"][data-mode="light"] {
+  --surface: rgba(253, 238, 222, 0.78);
+  --text: #3a2210;
+  --text-muted: rgba(58, 34, 16, 0.65);
+  --border: rgba(180, 90, 30, 0.18);
+  --control-bg: rgba(180, 90, 30, 0.08);
+  --overlay: rgba(36, 20, 8, 0.45);
+  --accent: #b0561a;
+}
+
+[data-font="serif"] {
+  --font-active: var(--font-serif), Georgia, serif;
+}
+[data-font="mono"] {
+  --font-active: var(--font-mono), ui-monospace, monospace;
+}
+[data-font="display"] {
+  --font-active: var(--font-display), Georgia, serif;
 }
 
 * {
@@ -13,6 +141,11 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  background: var(--bg);
+}
+
+body {
+  font-family: var(--font-active);
 }
 
 a {
