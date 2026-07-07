@@ -2,26 +2,26 @@
   /* The global `* { margin: 0 }` reset overrides the UA stylesheet's `margin: auto` that
      normally centers a native <dialog>, so it must be restored explicitly here. */
   margin: auto;
-  width: min(680px, 92vw);
-  max-height: 90vh;
+  width: min(560px, 92vw);
+  max-height: 86vh;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: var(--border-radius);
-  background: var(--surface);
-  -webkit-backdrop-filter: blur(var(--surface-blur));
-  backdrop-filter: blur(var(--surface-blur));
+  border-radius: 20px;
+  background: var(--panel-bg);
   color: var(--text);
   /* Deliberately var(--font-system), not var(--font-active): the settings menu's own
      typography should stay constant regardless of the font chosen for the slideshow. */
   font-family: var(--font-system);
 }
 
-.dialog::backdrop {
-  background: var(--overlay);
+/* Scoped to [open]: an unconditional `display: flex` on `.dialog` would override the UA
+   stylesheet's `dialog:not([open]) { display: none }` (author CSS always beats UA CSS at equal
+   importance, regardless of specificity), leaving the dialog visible before it's ever opened. */
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
-.body {
-  padding: 24px;
-  max-height: 90vh;
-  overflow-y: auto;
+.dialog::backdrop {
+  background: var(--overlay);
 }

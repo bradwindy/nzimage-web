@@ -35,7 +35,7 @@ export function Modal({ isOpen, onClose, titleId, children }: ModalProps) {
         if (e.target === ref.current) onClose();
       }}
     >
-      <div className={styles.body}>{children}</div>
+      {children}
     </dialog>
   );
 }

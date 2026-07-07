@@ -16,6 +16,7 @@
   --control-bg: rgba(255, 255, 255, 0.1);
   --overlay: rgba(0, 0, 0, 0.6);
   --accent: #c9d1d9;
+  --panel-bg: #232323;
 }
 
 [data-mode="dark"] {
@@ -27,6 +28,7 @@
   --border: rgba(255, 255, 255, 0.15);
   --control-bg: rgba(255, 255, 255, 0.1);
   --overlay: rgba(0, 0, 0, 0.6);
+  --panel-bg: #232323;
 }
 
 [data-mode="light"] {
@@ -38,6 +40,7 @@
   --border: rgba(0, 0, 0, 0.12);
   --control-bg: rgba(0, 0, 0, 0.06);
   --overlay: rgba(0, 0, 0, 0.5);
+  --panel-bg: #f4f3f1;
 }
 
 /*
@@ -53,6 +56,7 @@
   --control-bg: rgba(255, 255, 255, 0.1);
   --overlay: rgba(0, 0, 0, 0.6);
   --accent: #c9d1d9;
+  --panel-bg: #232323;
 }
 [data-tint="neutral"][data-mode="light"] {
   --surface: rgba(255, 255, 255, 0.72);
@@ -62,6 +66,7 @@
   --control-bg: rgba(0, 0, 0, 0.06);
   --overlay: rgba(0, 0, 0, 0.5);
   --accent: #3b4048;
+  --panel-bg: #f4f3f1;
 }
 
 [data-tint="sepia"][data-mode="dark"] {
@@ -72,6 +77,7 @@
   --control-bg: rgba(201, 156, 99, 0.14);
   --overlay: rgba(26, 18, 10, 0.65);
   --accent: #cf9a5c;
+  --panel-bg: #2b2118;
 }
 [data-tint="sepia"][data-mode="light"] {
   --surface: rgba(250, 240, 224, 0.78);
@@ -81,6 +87,7 @@
   --control-bg: rgba(120, 90, 50, 0.08);
   --overlay: rgba(40, 30, 18, 0.45);
   --accent: #8a5a2b;
+  --panel-bg: #faf3e8;
 }
 
 [data-tint="blue"][data-mode="dark"] {
@@ -91,6 +98,7 @@
   --control-bg: rgba(108, 150, 201, 0.12);
   --overlay: rgba(6, 12, 20, 0.65);
   --accent: #6ea8dc;
+  --panel-bg: #151d29;
 }
 [data-tint="blue"][data-mode="light"] {
   --surface: rgba(235, 242, 250, 0.78);
@@ -100,6 +108,7 @@
   --control-bg: rgba(30, 70, 110, 0.07);
   --overlay: rgba(10, 20, 32, 0.45);
   --accent: #285a86;
+  --panel-bg: #eef3f9;
 }
 
 [data-tint="orange"][data-mode="dark"] {
@@ -110,6 +119,7 @@
   --control-bg: rgba(214, 133, 66, 0.14);
   --overlay: rgba(22, 12, 5, 0.65);
   --accent: #e08a3c;
+  --panel-bg: #2a1d13;
 }
 [data-tint="orange"][data-mode="light"] {
   --surface: rgba(253, 238, 222, 0.78);
@@ -119,6 +129,7 @@
   --control-bg: rgba(180, 90, 30, 0.08);
   --overlay: rgba(36, 20, 8, 0.45);
   --accent: #b0561a;
+  --panel-bg: #faf0e5;
 }
 
 [data-font="serif"] {

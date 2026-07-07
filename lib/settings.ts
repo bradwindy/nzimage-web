@@ -2,6 +2,7 @@ export type Mode = "system" | "light" | "dark";
 export type Tint = "neutral" | "sepia" | "blue" | "orange";
 export type FontChoice = "system" | "serif" | "mono" | "display";
 export type InfoDensity = "less" | "more";
+export type DetailLevel = "none" | "minimal" | "all";
 
 export interface Settings {
   version: number;
@@ -29,6 +30,8 @@ export const INTERVAL_MS_MAX =
 
 export interface DescriptionLengthOption {
   label: string;
+  shortLabel: string;
+  longLabel: string;
   value: number;
 }
 
@@ -36,10 +39,15 @@ export interface DescriptionLengthOption {
 // round-tripping through localStorage (JSON.stringify(Infinity) === "null").
 export const DESCRIPTION_CHAR_LIMIT_UNLIMITED = 100_000;
 export const DESCRIPTION_LENGTH_OPTIONS: DescriptionLengthOption[] = [
-  { label: "Small", value: 100 },
-  { label: "Medium", value: 200 },
-  { label: "Large", value: 500 },
-  { label: "Unlimited", value: DESCRIPTION_CHAR_LIMIT_UNLIMITED },
+  { label: "Small", shortLabel: "Small (100 chars)", longLabel: "Small (100 characters)", value: 100 },
+  { label: "Medium", shortLabel: "Medium (200 chars)", longLabel: "Medium (200 characters)", value: 200 },
+  { label: "Large", shortLabel: "Large (500 chars)", longLabel: "Large (500 characters)", value: 500 },
+  {
+    label: "Unlimited",
+    shortLabel: "Unlimited",
+    longLabel: "Unlimited",
+    value: DESCRIPTION_CHAR_LIMIT_UNLIMITED,
+  },
 ];
 export const DESCRIPTION_CHAR_LIMIT_MIN = DESCRIPTION_LENGTH_OPTIONS[0].value;
 export const DESCRIPTION_CHAR_LIMIT_MAX = DESCRIPTION_CHAR_LIMIT_UNLIMITED;
@@ -48,6 +56,7 @@ export const MODES: Mode[] = ["system", "light", "dark"];
 export const TINTS: Tint[] = ["neutral", "sepia", "blue", "orange"];
 export const FONT_CHOICES: FontChoice[] = ["system", "serif", "mono", "display"];
 export const INFO_DENSITIES: InfoDensity[] = ["less", "more"];
+export const DETAIL_LEVELS: DetailLevel[] = ["none", "minimal", "all"];
 
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
@@ -106,4 +115,16 @@ export function sanitizeSettings(raw: unknown): Settings {
         ? o.hideChromeUntilInteract
         : DEFAULT_SETTINGS.hideChromeUntilInteract,
   };
+}
+
+/** Derives the single "Detail level" control value from the two underlying settings fields. */
+export function settingsToDetailLevel(settings: Settings): DetailLevel {
+  if (!settings.showInfoPanel) return "none";
+  return settings.infoDensity === "more" ? "all" : "minimal";
+}
+
+/** Maps a "Detail level" selection back onto the two underlying settings fields. */
+export function detailLevelToSettings(level: DetailLevel): Pick<Settings, "showInfoPanel" | "infoDensity"> {
+  if (level === "none") return { showInfoPanel: false, infoDensity: DEFAULT_SETTINGS.infoDensity };
+  return { showInfoPanel: true, infoDensity: level === "all" ? "more" : "less" };
 }
