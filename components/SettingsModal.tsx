@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Modal } from "./Modal";
 import { Dropdown, type DropdownOption } from "./ui/Dropdown";
 import { Toggle } from "./ui/Toggle";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import styles from "./SettingsModal.module.css";
 import { useSettings } from "@/lib/settings-context";
 import { fetchCollections } from "@/lib/nz-image";
@@ -134,6 +135,7 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
   const [collections, setCollections] = useState<string[]>([]);
   const [collectionSearch, setCollectionSearch] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -178,6 +180,11 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
     setOpenDropdown((current) => (current === name ? null : name));
   }
 
+  function handleConfirmReset() {
+    reset();
+    setConfirmResetOpen(false);
+  }
+
   const modeOptions: DropdownOption[] = MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }));
   const tintOptions: DropdownOption[] = TINTS.map((t) => ({
     value: t,
@@ -210,7 +217,16 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
   return (
     <Modal isOpen={isOpen} onClose={handleClose} titleId="settings-title">
       <div className={styles.header}>
-        <h2 id="settings-title">Settings</h2>
+        <div className={styles.headerLeft}>
+          <h2 id="settings-title">Settings</h2>
+          <button
+            type="button"
+            className={styles.resetLink}
+            onClick={() => setConfirmResetOpen(true)}
+          >
+            Reset all
+          </button>
+        </div>
         <button
           type="button"
           className={styles.close}
@@ -346,11 +362,14 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
         </SettingsGroup>
       </div>
 
-      <div className={styles.footer}>
-        <button type="button" className={styles.reset} onClick={reset}>
-          Reset to defaults
-        </button>
-      </div>
+      <ConfirmDialog
+        isOpen={confirmResetOpen}
+        title="Reset all settings?"
+        message="This restores every setting on this page to its default value. This can't be undone."
+        confirmLabel="Reset all"
+        onConfirm={handleConfirmReset}
+        onCancel={() => setConfirmResetOpen(false)}
+      />
     </Modal>
   );
 }

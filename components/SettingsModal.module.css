@@ -14,6 +14,23 @@
   letter-spacing: -0.01em;
 }
 
+.headerLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.resetLink {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .close {
   width: 30px;
   height: 30px;
@@ -31,7 +48,7 @@
 .body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px 8px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -154,23 +171,6 @@
 
 .collectionNameHidden {
   opacity: 0.5;
-}
-
-.footer {
-  flex: none;
-  padding: 14px 24px 20px;
-  border-top: 1px solid var(--border);
-}
-
-.reset {
-  width: 100%;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--text-muted);
-  font-size: 13px;
-  cursor: pointer;
 }
 
 @media (max-width: 420px) {

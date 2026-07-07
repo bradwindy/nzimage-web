@@ -75,6 +75,17 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+// intervalMs is effectively an enum (one of INTERVAL_STEP_OPTIONS_SECONDS), not a continuous
+// range, so out-of-step values (e.g. a stale value from before the dropdown redesign, or a
+// hand-edited localStorage entry) must snap to the nearest valid step rather than just clamp,
+// or the dropdown shows the raw millisecond value instead of a label (no option matches it).
+const INTERVAL_MS_STEPS = INTERVAL_STEP_OPTIONS_SECONDS.map((s) => s * 1000);
+function snapToIntervalStep(value: number): number {
+  return INTERVAL_MS_STEPS.reduce((closest, step) =>
+    Math.abs(step - value) < Math.abs(closest - value) ? step : closest
+  );
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
 }
@@ -91,7 +102,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     version: SETTINGS_VERSION,
     intervalMs:
       typeof o.intervalMs === "number" && Number.isFinite(o.intervalMs)
-        ? clamp(o.intervalMs, INTERVAL_MS_MIN, INTERVAL_MS_MAX)
+        ? snapToIntervalStep(clamp(o.intervalMs, INTERVAL_MS_MIN, INTERVAL_MS_MAX))
         : DEFAULT_SETTINGS.intervalMs,
     mode: MODES.includes(o.mode as Mode) ? (o.mode as Mode) : DEFAULT_SETTINGS.mode,
     tint: TINTS.includes(o.tint as Tint) ? (o.tint as Tint) : DEFAULT_SETTINGS.tint,
