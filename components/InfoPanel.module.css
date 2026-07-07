@@ -1,0 +1,47 @@
+.panel {
+  color: var(--text);
+}
+
+.description,
+.metadata,
+.collection,
+.landingLink {
+  margin-top: 10px;
+}
+
+.metadataRow {
+  margin-top: 4px;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.metadataLabel {
+  font-weight: 600;
+}
+
+.collection {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.landingLink {
+  display: inline-block;
+  font-size: 0.85em;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.landingLink:hover {
+  opacity: 1;
+  text-decoration: underline;
+}

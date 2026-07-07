@@ -8,27 +8,43 @@
   background-color: black;
 }
 
+.frame {
+  position: relative;
+  flex: 1;
+  width: 100%;
+}
+
+.imageWrapper {
+  /* `inset: 0` rather than `width/height: 100%` -- percentage heights on a plain block child
+     don't reliably resolve against a flex item's flex-grow-computed height (Chromium leaves it
+     0 in this configuration), whereas absolute positioning with explicit insets sizes directly
+     off .frame's definite layout box regardless. */
+  position: absolute;
+  inset: 0;
+}
+
 .image {
   object-fit: contain;
 }
 
 .text {
   position: fixed;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--surface);
+  -webkit-backdrop-filter: blur(var(--surface-blur));
+  backdrop-filter: blur(var(--surface-blur));
   bottom: 0px;
   left: 0px;
   padding: 20px;
   border-radius: 10px;
   margin: 30px;
-  font-family: Helvetica, sans-serif;
-  color: white;
+  font-family: var(--font-active);
+  color: var(--text);
+  max-width: min(480px, calc(100vw - 60px));
 }
 
-.description,
-.collection {
-  margin-top: 10px;
-}
-
-.collection {
-  font-style: italic;
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .text {
+    background-color: var(--bg);
+    opacity: 0.85;
+  }
 }

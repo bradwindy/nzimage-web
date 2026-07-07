@@ -1,0 +1,11 @@
+.revealHotspot {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  width: 56px;
+  height: 56px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}

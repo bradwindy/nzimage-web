@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic"; // never statically cache; fresh image per call
-
-export async function GET(request: Request) {
+export async function GET() {
   const base = process.env.IMAGE_API_URL;
   const secret = process.env.NZIMAGE_API_SECRET;
   if (!base || !secret) {
     return NextResponse.json({ error: "Image API not configured" }, { status: 500 });
   }
-  const exclude = new URL(request.url).searchParams.get("exclude");
-  const upstreamUrl = new URL(`${base}/image`);
-  if (exclude) upstreamUrl.searchParams.set("exclude", exclude);
-
   try {
-    const upstream = await fetch(upstreamUrl, {
-      headers: { secret },
-      cache: "no-store",
-    });
+    const upstream = await fetch(`${base}/collections`, { headers: { secret } });
     if (!upstream.ok) {
       return NextResponse.json({ error: "Upstream error" }, { status: upstream.status });
     }
     return NextResponse.json(await upstream.json(), {
-      headers: { "cache-control": "no-store" },
+      headers: { "cache-control": "max-age=3600" },
     });
   } catch {
     return NextResponse.json({ error: "Upstream unreachable" }, { status: 502 });
