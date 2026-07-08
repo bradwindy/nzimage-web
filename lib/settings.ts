@@ -60,7 +60,7 @@ export const DETAIL_LEVELS: DetailLevel[] = ["none", "minimal", "all"];
 
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
-  intervalMs: 10000,
+  intervalMs: 30000,
   mode: "system",
   tint: "neutral",
   font: "system",
