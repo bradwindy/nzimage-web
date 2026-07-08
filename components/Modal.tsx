@@ -8,13 +8,16 @@ interface ModalProps {
   onClose: () => void;
   titleId: string;
   children: ReactNode;
+  // Lets a specific modal (e.g. WelcomeModal) override the shared dialog look without
+  // affecting every other consumer of this component.
+  className?: string;
 }
 
 /**
  * Thin wrapper over native <dialog>: showModal()/close() give us the top-layer, ::backdrop,
  * Esc-to-close, and inert background for free, so no hand-rolled focus trap is needed.
  */
-export function Modal({ isOpen, onClose, titleId, children }: ModalProps) {
+export function Modal({ isOpen, onClose, titleId, children, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -27,7 +30,7 @@ export function Modal({ isOpen, onClose, titleId, children }: ModalProps) {
   return (
     <dialog
       ref={ref}
-      className={styles.dialog}
+      className={className ? `${styles.dialog} ${className}` : styles.dialog}
       aria-labelledby={titleId}
       onClose={onClose}
       onCancel={onClose}

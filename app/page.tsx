@@ -7,6 +7,8 @@ import { fetchNZImage, type NZImage } from "@/lib/nz-image";
 import { useSettings } from "@/lib/settings-context";
 import { InfoPanel } from "@/components/InfoPanel";
 import { SettingsRoot, type SettingsRootHandle } from "@/components/SettingsRoot";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { WelcomeModal } from "@/components/WelcomeModal";
 
 const RETRY_DELAY_MS = 1000;
 const QUEUE_SIZE = 5; // images buffered ahead of the one on screen
@@ -163,7 +165,7 @@ export default function Home() {
       }}
     >
       <div className={styles.frame}>
-        {displayed && (
+        {displayed ? (
           <div className={styles.imageWrapper}>
             <Image
               className={styles.image}
@@ -178,9 +180,12 @@ export default function Home() {
               </div>
             )}
           </div>
+        ) : (
+          <LoadingOverlay />
         )}
       </div>
       <SettingsRoot ref={settingsRootRef} />
+      <WelcomeModal />
     </main>
   );
 }
