@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":semanticCommits"],
+  "labels": ["dependencies"],
+  "timezone": "Pacific/Auckland",
+  "schedule": ["before 9am on monday"],
+  "osvVulnerabilityAlerts": true,
+  "rebaseWhen": "conflicted",
+  "prConcurrentLimit": 10,
+  "abandonmentThreshold": null,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge minor/patch PRs when CI passes (7-day wait, stricter than the 3-day default)",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Auto-open PRs for major updates; review manually",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "groupName": "React",
+      "matchPackageNames": ["/^react/", "/^@types/react/"]
+    },
+    {
+      "groupName": "Next.js",
+      "matchPackageNames": ["/^next/", "/^@next//", "/^eslint-config-next/"]
+    }
+  ]
+}
