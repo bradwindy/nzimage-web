@@ -33,6 +33,11 @@
     {
       "groupName": "Next.js",
       "matchPackageNames": ["/^next/", "/^@next//", "/^eslint-config-next/"]
+    },
+    {
+      "description": "eslint-plugin-react (bundled via eslint-config-next) is not yet compatible with ESLint 10 - see https://github.com/jsx-eslint/eslint-plugin-react/issues/4018. Remove this rule once eslint-config-next ships support.",
+      "matchPackageNames": ["eslint"],
+      "allowedVersions": "<10.0.0"
     }
   ]
 }
