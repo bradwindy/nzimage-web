@@ -1,77 +1,232 @@
-import { describe, it, expect } from "vitest";
-import { parseNZImage } from "./nz-image";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { parseNZImage, fetchNZImage, fetchCollections } from "./nz-image";
 
 const validRaw = {
-  id: 7,
+  id: 1,
   title: "A photo",
-  thumbnail_url: "https://example.test/t.jpg",
-  large_thumbnail_url: "https://example.test/l.jpg",
+  large_thumbnail_url: "https://example.com/large.jpg",
+  thumbnail_url: "https://example.com/thumb.jpg",
   description: "A description",
   display_collection: "Some Collection",
-  landing_url: "https://example.test/item",
-  creator: ["Ansel Adams"],
-  date: ["1941"],
-  subject: ["Mountains", "Snow"],
+  landing_url: "https://example.com/landing",
+  creator: ["Jane Doe"],
+  date: ["1900"],
+  subject: ["Landscapes"],
 };
 
 describe("parseNZImage", () => {
-  it("maps snake_case upstream JSON to the camelCase interface", () => {
+  it.each([undefined, null, "string", 1, true])("returns null for non-object primitive %p", (value) => {
+    expect(parseNZImage(value)).toBeNull();
+  });
+
+  it.each([
+    ["id", { ...validRaw, id: "1" }],
+    ["title", { ...validRaw, title: 1 }],
+    ["large_thumbnail_url", { ...validRaw, large_thumbnail_url: 1 }],
+    ["thumbnail_url", { ...validRaw, thumbnail_url: 1 }],
+  ])("returns null when %s has the wrong type", (_field, raw) => {
+    expect(parseNZImage(raw)).toBeNull();
+  });
+
+  it.each([
+    ["id", { ...validRaw, id: undefined }],
+    ["title", { ...validRaw, title: undefined }],
+    ["large_thumbnail_url", { ...validRaw, large_thumbnail_url: undefined }],
+    ["thumbnail_url", { ...validRaw, thumbnail_url: undefined }],
+  ])("returns null when %s is missing", (_field, raw) => {
+    expect(parseNZImage(raw)).toBeNull();
+  });
+
+  it("maps snake_case fields to camelCase on success", () => {
     expect(parseNZImage(validRaw)).toEqual({
-      id: 7,
+      id: 1,
       title: "A photo",
-      thumbnailUrl: "https://example.test/t.jpg",
-      largeThumbnailUrl: "https://example.test/l.jpg",
+      thumbnailUrl: "https://example.com/thumb.jpg",
+      largeThumbnailUrl: "https://example.com/large.jpg",
       description: "A description",
       displayCollection: "Some Collection",
-      landingUrl: "https://example.test/item",
-      creator: ["Ansel Adams"],
-      date: ["1941"],
-      subject: ["Mountains", "Snow"],
+      landingUrl: "https://example.com/landing",
+      creator: ["Jane Doe"],
+      date: ["1900"],
+      subject: ["Landscapes"],
     });
   });
 
-  it("leaves optionals undefined when absent", () => {
+  it("allows id: NaN since typeof NaN === 'number'", () => {
+    expect(parseNZImage({ ...validRaw, id: NaN })).not.toBeNull();
+  });
+
+  it.each([
+    ["description", "description"],
+    ["display_collection", "displayCollection"],
+    ["landing_url", "landingUrl"],
+  ] as const)(
+    "maps a non-string optional %s to undefined without failing the parse",
+    (field, camelField) => {
+      const result = parseNZImage({ ...validRaw, [field]: 42 });
+      expect(result).not.toBeNull();
+      expect(result?.[camelField]).toBeUndefined();
+    }
+  );
+
+  it("omits all optional fields when they are absent", () => {
     const minimal = {
       id: 1,
-      title: "t",
-      thumbnail_url: "a",
-      large_thumbnail_url: "b",
+      title: "A photo",
+      large_thumbnail_url: "https://example.com/large.jpg",
+      thumbnail_url: "https://example.com/thumb.jpg",
     };
-    const parsed = parseNZImage(minimal);
-    expect(parsed).not.toBeNull();
-    expect(parsed).toMatchObject({ id: 1, title: "t", thumbnailUrl: "a", largeThumbnailUrl: "b" });
-    expect(parsed?.description).toBeUndefined();
-    expect(parsed?.displayCollection).toBeUndefined();
-    expect(parsed?.creator).toBeUndefined();
+    expect(parseNZImage(minimal)).toEqual({
+      id: 1,
+      title: "A photo",
+      thumbnailUrl: "https://example.com/thumb.jpg",
+      largeThumbnailUrl: "https://example.com/large.jpg",
+      description: undefined,
+      displayCollection: undefined,
+      landingUrl: undefined,
+      creator: undefined,
+      date: undefined,
+      subject: undefined,
+    });
   });
 
-  it("returns null for non-object input", () => {
-    expect(parseNZImage(null)).toBeNull();
-    expect(parseNZImage(undefined)).toBeNull();
-    expect(parseNZImage("string")).toBeNull();
-    expect(parseNZImage(123)).toBeNull();
+  describe("parseOptionalStringArray quirks", () => {
+    it("maps an empty array to an empty array", () => {
+      const result = parseNZImage({ ...validRaw, creator: [] });
+      expect(result?.creator).toEqual([]);
+    });
+
+    it("maps a mixed-type array to undefined", () => {
+      const result = parseNZImage({ ...validRaw, creator: ["a", 1] });
+      expect(result?.creator).toBeUndefined();
+    });
+
+    it("maps a non-array value to undefined", () => {
+      const result = parseNZImage({ ...validRaw, creator: "not an array" });
+      expect(result?.creator).toBeUndefined();
+    });
+  });
+});
+
+describe("fetchNZImage", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
   });
 
-  it("returns null when a required field is missing or mistyped", () => {
-    expect(parseNZImage({ ...validRaw, id: "7" })).toBeNull();
-    expect(parseNZImage({ ...validRaw, title: 5 })).toBeNull();
-    const { large_thumbnail_url, ...noLarge } = validRaw;
-    void large_thumbnail_url;
-    expect(parseNZImage(noLarge)).toBeNull();
-    const { thumbnail_url, ...noThumb } = validRaw;
-    void thumbnail_url;
-    expect(parseNZImage(noThumb)).toBeNull();
+  it("requests /api/image with no query string when exclude is absent", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => validRaw });
+
+    await fetchNZImage();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/image", {
+      signal: undefined,
+      cache: "no-store",
+    });
   });
 
-  it("drops optional arrays that aren't all strings, but keeps the record", () => {
-    const parsed = parseNZImage({ ...validRaw, creator: ["ok", 3], date: "not-an-array" });
-    expect(parsed).not.toBeNull();
-    expect(parsed?.creator).toBeUndefined();
-    expect(parsed?.date).toBeUndefined();
-    expect(parsed?.subject).toEqual(["Mountains", "Snow"]);
+  it("joins a non-empty exclude list into the query string", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => validRaw });
+
+    await fetchNZImage({ exclude: ["a", "b"] });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/image?exclude=a%2Cb", {
+      signal: undefined,
+      cache: "no-store",
+    });
   });
 
-  it("drops a mistyped optional description", () => {
-    expect(parseNZImage({ ...validRaw, description: 123 })?.description).toBeUndefined();
+  it("does not add an exclude param for an empty exclude array", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => validRaw });
+
+    await fetchNZImage({ exclude: [] });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/image", {
+      signal: undefined,
+      cache: "no-store",
+    });
+  });
+
+  it("passes the abort signal through to fetch", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => validRaw });
+    const controller = new AbortController();
+
+    await fetchNZImage({ signal: controller.signal });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/image", {
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  });
+
+  it("returns null when the response is not ok", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: false, json: async () => validRaw });
+
+    expect(await fetchNZImage()).toBeNull();
+  });
+
+  it("returns the parsed image when the response is ok", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => validRaw });
+
+    const result = await fetchNZImage();
+
+    expect(result?.id).toBe(1);
+    expect(result?.title).toBe("A photo");
+  });
+
+  it("returns null when the response body fails to parse", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ bad: "data" }) });
+
+    expect(await fetchNZImage()).toBeNull();
+  });
+});
+
+describe("fetchCollections", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  it("returns [] when the response is not ok", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ["a"] });
+
+    expect(await fetchCollections()).toEqual([]);
+  });
+
+  it("returns [] when the response body is not an array", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ not: "an array" }) });
+
+    expect(await fetchCollections()).toEqual([]);
+  });
+
+  it("returns [] when the array contains a non-string element", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ["a", 1] });
+
+    expect(await fetchCollections()).toEqual([]);
+  });
+
+  it("returns the string array when the response is ok", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ["a", "b"] });
+
+    expect(await fetchCollections()).toEqual(["a", "b"]);
+  });
+
+  it("passes the abort signal through to fetch", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
+    const controller = new AbortController();
+
+    await fetchCollections(controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/collections", { signal: controller.signal });
   });
 });

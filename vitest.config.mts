@@ -13,5 +13,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // window.localStorage is a single MemoryStorage instance shared across every test in a file
+    // (see vitest.setup.ts); restoreMocks undoes any vi.spyOn(window.localStorage, ...) after
+    // each test so a spy in one test can't leak into the next.
+    clearMocks: true,
+    restoreMocks: true,
   },
 });
