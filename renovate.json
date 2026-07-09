@@ -38,6 +38,11 @@
       "description": "eslint-plugin-react (bundled via eslint-config-next) is not yet compatible with ESLint 10 - see https://github.com/jsx-eslint/eslint-plugin-react/issues/4018. Remove this rule once eslint-config-next ships support.",
       "matchPackageNames": ["eslint"],
       "allowedVersions": "<10.0.0"
+    },
+    {
+      "description": "typescript-eslint (bundled via eslint-config-next) is not yet compatible with TypeScript 7 - see https://github.com/typescript-eslint/typescript-eslint/issues/10940 and https://github.com/typescript-eslint/typescript-eslint/issues/12518. Remove this rule once typescript-eslint ships support.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7.0.0"
     }
   ]
 }
