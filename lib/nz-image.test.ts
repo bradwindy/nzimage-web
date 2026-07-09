@@ -56,11 +56,16 @@ describe("parseNZImage", () => {
     expect(parseNZImage({ ...validRaw, id: NaN })).not.toBeNull();
   });
 
-  it.each(["description", "display_collection", "landing_url"])(
+  it.each([
+    ["description", "description"],
+    ["display_collection", "displayCollection"],
+    ["landing_url", "landingUrl"],
+  ] as const)(
     "maps a non-string optional %s to undefined without failing the parse",
-    (field) => {
+    (field, camelField) => {
       const result = parseNZImage({ ...validRaw, [field]: 42 });
       expect(result).not.toBeNull();
+      expect(result?.[camelField]).toBeUndefined();
     }
   );
 
