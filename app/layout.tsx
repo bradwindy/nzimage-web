@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/lib/settings-context";
-import { SETTINGS_STORAGE_KEY } from "@/lib/settings";
+import { SETTINGS_STORAGE_KEY, TINTS, FONT_CHOICES, DEFAULT_SETTINGS } from "@/lib/settings";
 
 const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
@@ -34,16 +34,18 @@ export const viewport: Viewport = {
 
 // Resolves mode/tint/font from localStorage synchronously before first paint, so the themed
 // letterbox/panel colors don't flash to their defaults then swap. Mirrors the sanitization in
-// lib/settings.ts, kept inline (and deliberately duplicated, not imported) because this must run
-// as a blocking script tag before any React/module code executes.
+// lib/settings.ts. The script body must stay inline (it runs as a blocking <script> before any
+// React/module code executes), but the tint/font allow-lists and defaults are interpolated from
+// the settings.ts constants so they can't silently drift out of sync. The mode branch stays
+// literal because "system" needs runtime prefers-color-scheme resolution below.
 const noFlashScript = `
 (function () {
   try {
     var raw = window.localStorage.getItem(${JSON.stringify(SETTINGS_STORAGE_KEY)});
     var s = raw ? JSON.parse(raw) : {};
     var mode = s.mode === "light" || s.mode === "dark" ? s.mode : "system";
-    var tint = ["neutral", "sepia", "blue", "orange"].indexOf(s.tint) !== -1 ? s.tint : "neutral";
-    var font = ["system", "serif", "mono", "display"].indexOf(s.font) !== -1 ? s.font : "system";
+    var tint = ${JSON.stringify(TINTS)}.indexOf(s.tint) !== -1 ? s.tint : ${JSON.stringify(DEFAULT_SETTINGS.tint)};
+    var font = ${JSON.stringify(FONT_CHOICES)}.indexOf(s.font) !== -1 ? s.font : ${JSON.stringify(DEFAULT_SETTINGS.font)};
     var resolvedMode = mode;
     if (mode === "system") {
       resolvedMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

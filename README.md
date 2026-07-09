@@ -49,3 +49,4 @@ Open [http://localhost:3000](http://localhost:3000). Images won't load until
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — ESLint
+- `npm test` — run the Vitest suite once (use `npm run test:watch` for watch mode)
