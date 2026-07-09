@@ -1,20 +1,22 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 
+// See https://nextjs.org/docs/app/guides/testing/vitest. `resolve.tsconfigPaths` resolves the
+// `@/*` alias from tsconfig.json natively (Vite 7+); `react` lets us render client components
+// with React Testing Library.
 export default defineConfig({
-  plugins: [tsconfigPaths(), react()],
+  plugins: [react()],
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
-    globals: true,
     environment: "jsdom",
+    globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // window.localStorage is a single MemoryStorage instance shared across every test in a file
+    // (see vitest.setup.ts); restoreMocks undoes any vi.spyOn(window.localStorage, ...) after
+    // each test so a spy in one test can't leak into the next.
     clearMocks: true,
     restoreMocks: true,
-    // Node 25+ enables the Web Storage API by default, which shadows jsdom's localStorage
-    // implementation inside the worker and breaks every localStorage-backed test.
-    // https://github.com/vitest-dev/vitest/issues/8757
-    // Use the `--no-experimental-webstorage` spelling (not `--no-webstorage`, which Node only
-    // recognizes from v25 on) so this also works unchanged on CI's pinned Node 24.
-    execArgv: ["--no-experimental-webstorage"],
   },
 });

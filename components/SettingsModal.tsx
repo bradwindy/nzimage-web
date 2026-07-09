@@ -15,6 +15,8 @@ import {
   INTERVAL_STEP_OPTIONS_SECONDS,
   MODES,
   TINTS,
+  countHiddenCollections,
+  countVisibleCollections,
   detailLevelToSettings,
   settingsToDetailLevel,
   type DetailLevel,
@@ -151,7 +153,8 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
     onClose();
   }
 
-  const visibleCollectionsCount = collections.length - settings.hiddenCollections.length;
+  const visibleCollectionsCount = countVisibleCollections(collections, settings.hiddenCollections);
+  const hiddenCollectionsCount = countHiddenCollections(collections, settings.hiddenCollections);
 
   const sortedFilteredCollections = useMemo(() => {
     const query = collectionSearch.trim().toLowerCase();
@@ -327,7 +330,7 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
         <SettingsGroup
           icon={<CollectionsIcon />}
           title="Hidden Collections"
-          caption={`${settings.hiddenCollections.length} of ${collections.length} hidden`}
+          caption={`${hiddenCollectionsCount} of ${collections.length} hidden`}
         >
           <input
             type="text"

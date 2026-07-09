@@ -3,20 +3,25 @@
 ## What this is
 
 A single-page, full-screen slideshow of random New Zealand heritage images. Next.js 16
-(App Router), React 19, TypeScript, deployed on Vercel. There is one user-facing page and
-one API route; there is no database, no auth, and no test suite.
+(App Router), React 19, TypeScript, deployed on Vercel. One user-facing page (`app/page.tsx`)
+backed by a client-side settings layer (`lib/settings*`, `components/`) and two API routes
+(`/api/image`, `/api/collections`); there is no database and no auth.
 
 ## Commands
 
 ```bash
-npm run dev     # dev server at http://localhost:3000
-npm run build   # production build
-npm run start   # serve the production build
-npm run lint    # eslint (flat config, eslint.config.mjs)
+npm run dev        # dev server at http://localhost:3000
+npm run build      # production build
+npm run start      # serve the production build
+npm run lint       # eslint (flat config, eslint.config.mjs)
+npm test           # run the Vitest suite once
+npm run test:watch # Vitest in watch mode
 ```
 
-No test runner is configured — there are no `*.test.ts` files and no test script. Don't
-assume Jest/Vitest exist; if asked to add tests, pick and wire up a runner first.
+Tests use Vitest (config in `vitest.config.mts`, setup in `vitest.setup.ts`). Pure logic in
+`lib/` is unit-tested (`lib/*.test.ts`); client components are tested with React Testing
+Library + jsdom (`components/*.test.tsx`). CI (`.github/workflows/test.yml`) runs lint, test,
+and build.
 
 Images will not load in dev until `NZIMAGE_API_SECRET` holds a valid secret (see below).
 

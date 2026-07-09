@@ -3,6 +3,8 @@ import {
   sanitizeSettings,
   settingsToDetailLevel,
   detailLevelToSettings,
+  countHiddenCollections,
+  countVisibleCollections,
   DEFAULT_SETTINGS,
   SETTINGS_VERSION,
   INTERVAL_MS_MIN,
@@ -41,6 +43,7 @@ describe("sanitizeSettings", () => {
 
     it("snaps an out-of-step value to the nearest valid step", () => {
       expect(sanitizeSettings({ intervalMs: 12345 }).intervalMs).toBe(10000);
+      expect(sanitizeSettings({ intervalMs: 13000 }).intervalMs).toBe(15000);
     });
 
     it("leaves an already-valid step unchanged", () => {
@@ -103,20 +106,30 @@ describe("sanitizeSettings", () => {
       );
     });
 
-    it("clamps below the minimum", () => {
+    it("clamps below the minimum, then snaps to the nearest option", () => {
       expect(sanitizeSettings({ descriptionCharLimit: 0 }).descriptionCharLimit).toBe(
         DESCRIPTION_CHAR_LIMIT_MIN
       );
     });
 
-    it("clamps above the maximum", () => {
+    it("clamps above the maximum, then snaps to the nearest option", () => {
       expect(sanitizeSettings({ descriptionCharLimit: 999_999_999 }).descriptionCharLimit).toBe(
         DESCRIPTION_CHAR_LIMIT_MAX
       );
     });
 
-    it("passes through an in-range value unchanged", () => {
+    it("passes through an exact option value unchanged", () => {
       expect(sanitizeSettings({ descriptionCharLimit: 200 }).descriptionCharLimit).toBe(200);
+    });
+
+    // Regression: descriptionCharLimit used to only clamp, not snap, so an off-step in-range
+    // value (e.g. a hand-edited localStorage entry) survived and left the settings dropdown
+    // showing a raw number with no matching option.
+    it("snaps an off-step in-range value to the nearest option", () => {
+      // 300 is closer to 200 (100 away) than 500 (200 away).
+      expect(sanitizeSettings({ descriptionCharLimit: 300 }).descriptionCharLimit).toBe(200);
+      // 450 is closer to 500 than to 200.
+      expect(sanitizeSettings({ descriptionCharLimit: 450 }).descriptionCharLimit).toBe(500);
     });
   });
 
@@ -152,5 +165,27 @@ describe("settingsToDetailLevel / detailLevelToSettings round-trip", () => {
 
   it("maps all to showInfoPanel: true, infoDensity: more", () => {
     expect(detailLevelToSettings("all")).toEqual({ showInfoPanel: true, infoDensity: "more" });
+  });
+});
+
+// Regression: visibleCollectionsCount used to be `collections.length - hiddenCollections.length`,
+// which under-counts (or goes negative) whenever `hiddenCollections` contains a name not present
+// in the loaded list — e.g. while the list is still loading, or after upstream renames/removes a
+// collection a user had hidden. These helpers instead count the intersection of the two lists.
+describe("countHiddenCollections / countVisibleCollections", () => {
+  it("ignores hidden entries that aren't in the loaded list", () => {
+    expect(countHiddenCollections(["A", "B"], ["A", "X"])).toBe(1);
+    expect(countVisibleCollections(["A", "B"], ["A", "X"])).toBe(1);
+  });
+
+  it("never goes negative while the list is still loading (empty all)", () => {
+    expect(countHiddenCollections([], ["A", "B"])).toBe(0);
+    expect(countVisibleCollections([], ["A", "B"])).toBe(0);
+  });
+
+  it("handles the normal case", () => {
+    expect(countHiddenCollections(["A", "B", "C"], ["B"])).toBe(1);
+    expect(countVisibleCollections(["A", "B", "C"], ["B"])).toBe(2);
+    expect(countVisibleCollections(["A"], [])).toBe(1);
   });
 });

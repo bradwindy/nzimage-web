@@ -75,13 +75,14 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-// intervalMs is effectively an enum (one of INTERVAL_STEP_OPTIONS_SECONDS), not a continuous
-// range, so out-of-step values (e.g. a stale value from before the dropdown redesign, or a
-// hand-edited localStorage entry) must snap to the nearest valid step rather than just clamp,
-// or the dropdown shows the raw millisecond value instead of a label (no option matches it).
+// intervalMs and descriptionCharLimit are effectively enums (each is one of a fixed option set),
+// not continuous ranges, so out-of-step values (a stale value from before an option redesign, or a
+// hand-edited localStorage entry) must snap to the nearest valid step rather than just clamp, or
+// the dropdown shows the raw value instead of a label (no option matches it).
 const INTERVAL_MS_STEPS = INTERVAL_STEP_OPTIONS_SECONDS.map((s) => s * 1000);
-function snapToIntervalStep(value: number): number {
-  return INTERVAL_MS_STEPS.reduce((closest, step) =>
+const DESCRIPTION_CHAR_LIMIT_STEPS = DESCRIPTION_LENGTH_OPTIONS.map((o) => o.value);
+function snapToNearest(value: number, steps: number[]): number {
+  return steps.reduce((closest, step) =>
     Math.abs(step - value) < Math.abs(closest - value) ? step : closest
   );
 }
@@ -102,7 +103,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     version: SETTINGS_VERSION,
     intervalMs:
       typeof o.intervalMs === "number" && Number.isFinite(o.intervalMs)
-        ? snapToIntervalStep(clamp(o.intervalMs, INTERVAL_MS_MIN, INTERVAL_MS_MAX))
+        ? snapToNearest(clamp(o.intervalMs, INTERVAL_MS_MIN, INTERVAL_MS_MAX), INTERVAL_MS_STEPS)
         : DEFAULT_SETTINGS.intervalMs,
     mode: MODES.includes(o.mode as Mode) ? (o.mode as Mode) : DEFAULT_SETTINGS.mode,
     tint: TINTS.includes(o.tint as Tint) ? (o.tint as Tint) : DEFAULT_SETTINGS.tint,
@@ -119,7 +120,10 @@ export function sanitizeSettings(raw: unknown): Settings {
       : DEFAULT_SETTINGS.infoDensity,
     descriptionCharLimit:
       typeof o.descriptionCharLimit === "number" && Number.isFinite(o.descriptionCharLimit)
-        ? clamp(o.descriptionCharLimit, DESCRIPTION_CHAR_LIMIT_MIN, DESCRIPTION_CHAR_LIMIT_MAX)
+        ? snapToNearest(
+            clamp(o.descriptionCharLimit, DESCRIPTION_CHAR_LIMIT_MIN, DESCRIPTION_CHAR_LIMIT_MAX),
+            DESCRIPTION_CHAR_LIMIT_STEPS
+          )
         : DEFAULT_SETTINGS.descriptionCharLimit,
     hideChromeUntilInteract:
       typeof o.hideChromeUntilInteract === "boolean"
@@ -138,4 +142,16 @@ export function settingsToDetailLevel(settings: Settings): DetailLevel {
 export function detailLevelToSettings(level: DetailLevel): Pick<Settings, "showInfoPanel" | "infoDensity"> {
   if (level === "none") return { showInfoPanel: false, infoDensity: DEFAULT_SETTINGS.infoDensity };
   return { showInfoPanel: true, infoDensity: level === "all" ? "more" : "less" };
+}
+
+// Counts are derived from the intersection of the loaded collection list and the hidden set rather
+// than plain array-length arithmetic: `hidden` can contain names not present in `all` (the list is
+// still loading, or upstream renamed/removed a collection a user had hidden). Length subtraction
+// would then under-count visibles — showing a nonsensical "N of M hidden" caption and wrongly
+// disabling the last toggle.
+export function countHiddenCollections(all: string[], hidden: string[]): number {
+  return all.reduce((n, name) => (hidden.includes(name) ? n + 1 : n), 0);
+}
+export function countVisibleCollections(all: string[], hidden: string[]): number {
+  return all.length - countHiddenCollections(all, hidden);
 }

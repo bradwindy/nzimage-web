@@ -21,7 +21,7 @@ describe("hasSeenWelcome", () => {
   });
 
   it("returns true (safe default) when localStorage.getItem throws", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    vi.spyOn(window.localStorage, "getItem").mockImplementation(() => {
       throw new Error("blocked");
     });
     expect(hasSeenWelcome()).toBe(true);
@@ -35,7 +35,7 @@ describe("markWelcomeSeen", () => {
   });
 
   it("swallows a throwing setItem", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
       throw new Error("quota exceeded");
     });
     expect(() => markWelcomeSeen()).not.toThrow();

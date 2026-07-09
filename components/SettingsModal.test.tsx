@@ -4,7 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { SettingsModal } from "./SettingsModal";
 import { renderWithSettings } from "@/lib/test-utils";
 import { SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS, type Settings } from "@/lib/settings";
+import { fetchCollections } from "@/lib/nz-image";
 
+// fetchCollections does a real network fetch; mock it so the modal gets a deterministic list.
+vi.mock("@/lib/nz-image", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/nz-image")>();
+  return { ...actual, fetchCollections: vi.fn() };
+});
+
+const mockFetchCollections = vi.mocked(fetchCollections);
 const collections = ["Auckland Libraries", "National Library"];
 
 function readPersisted(): Settings {
@@ -12,10 +20,8 @@ function readPersisted(): Settings {
 }
 
 beforeEach(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({ ok: true, json: async () => collections })
-  );
+  mockFetchCollections.mockReset();
+  mockFetchCollections.mockResolvedValue(collections);
 });
 
 describe("SettingsModal", () => {
@@ -102,5 +108,38 @@ describe("SettingsModal", () => {
     await user.click(within(confirmDialog).getByRole("button", { name: "Cancel" }));
 
     expect(readPersisted().intervalMs).toBe(15000);
+  });
+});
+
+describe("SettingsModal — hidden collections count (regression: intersection, not length subtraction)", () => {
+  it("reads '0 of N hidden' once collections load with nothing hidden", async () => {
+    renderWithSettings(<SettingsModal isOpen onClose={() => {}} />);
+
+    await screen.findByText(collections[0]);
+    expect(screen.getByText(`0 of ${collections.length} hidden`)).toBeInTheDocument();
+  });
+
+  it("counts only hidden names present in the list — stale entries don't inflate the numerator", async () => {
+    // "Stale1"/"Stale2" were hidden previously but no longer exist upstream.
+    renderWithSettings(<SettingsModal isOpen onClose={() => {}} />, {
+      hiddenCollections: [collections[0], "Stale1", "Stale2"],
+    });
+
+    await screen.findByText(collections[0]);
+    // Only collections[0] is really hidden; the numerator must never exceed the loaded total.
+    expect(screen.getByText(`1 of ${collections.length} hidden`)).toBeInTheDocument();
+    expect(screen.queryByText(`${collections.length} of ${collections.length} hidden`)).not.toBeInTheDocument();
+  });
+
+  it("keeps a genuinely-visible collection's toggle enabled despite stale hidden entries", async () => {
+    // Old code: visible = 3 - 3 = 0, so a genuinely-visible collection's toggle was wrongly
+    // disabled (0 <= 1). Fixed code: visible = 3 - 1 = 2, so it stays toggleable.
+    mockFetchCollections.mockResolvedValue([...collections, "Third Collection"]);
+    renderWithSettings(<SettingsModal isOpen onClose={() => {}} />, {
+      hiddenCollections: [collections[0], "Stale1", "Stale2"],
+    });
+
+    await screen.findByText(collections[1]);
+    expect(screen.getByRole("switch", { name: `Hide ${collections[1]}` })).toBeEnabled();
   });
 });
