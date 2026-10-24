@@ -50,9 +50,7 @@ export interface FetchNZImageOptions {
 
 export async function fetchNZImage(opts: FetchNZImageOptions = {}): Promise<NZImage | null> {
   const params = new URLSearchParams();
-  if (opts.exclude && opts.exclude.length > 0) {
-    params.set("exclude", opts.exclude.join(","));
-  }
+  for (const name of opts.exclude ?? []) params.append("exclude", name);
   const query = params.toString();
   const url = query ? `/api/image?${query}` : "/api/image";
 

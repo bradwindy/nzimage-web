@@ -10,7 +10,9 @@ import { SettingsRoot, type SettingsRootHandle } from "@/components/SettingsRoot
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { WelcomeModal } from "@/components/WelcomeModal";
 
-const RETRY_DELAY_MS = 1000;
+const RETRY_DELAY_MS = 1000; // first retry after a failure, doubling per consecutive failure
+const MAX_RETRY_DELAY_MS = 60_000;
+const DECODE_FAILURES_BEFORE_BACKOFF = 3; // a few broken thumbnails in a row are normal
 const QUEUE_SIZE = 5; // images buffered ahead of the one on screen
 const SLEEP_POLL_MS = 500; // granularity for picking up a shortened interval mid-wait
 
@@ -93,34 +95,54 @@ export default function Home() {
     const queue: QueueEntry[] = [];
     const hasItem = createGate(); // opened after an item is pushed
     const hasSpace = createGate(); // opened after an item is shifted
+    const becameVisible = createGate(); // opened when the tab becomes visible again
+
+    // Both loops pause while the tab is hidden so background tabs don't spend the Worker's daily
+    // request budget. They only ever wait on the gate, so resuming can't start a second loop.
+    const isHidden = () => document.visibilityState === "hidden";
+    const onVisibilityChange = () => {
+      if (!isHidden()) becameVisible.open();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     // Producer: keep the queue filled to QUEUE_SIZE with decoded images.
     (async function produce() {
+      let retryDelayMs = RETRY_DELAY_MS;
+      let decodeFailures = 0;
+      const backOff = async () => {
+        await sleep(retryDelayMs, signal).catch(() => {});
+        retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
+      };
       while (!cancelled) {
         // Block while the queue is full; wake when the consumer frees a slot.
         while (!cancelled && queue.length >= QUEUE_SIZE) await hasSpace.wait();
+        while (!cancelled && isHidden()) await becameVisible.wait();
         if (cancelled) return;
 
         const image = await fetchNZImage({
           signal,
           exclude: settingsRef.current.hiddenCollections,
         }).catch(() => null);
+        // Back off exponentially when the API fails, or when images keep failing to decode (their
+        // host is down), so neither can burn the shared daily Worker request budget. An odd broken
+        // thumbnail is skipped at once. Only a queued image resets the backoff.
         if (image === null) {
-          // Network/fetch failure: brief backoff, then try a different image.
-          await sleep(RETRY_DELAY_MS, signal).catch(() => {});
+          decodeFailures = 0;
+          await backOff();
           continue;
         }
-
-        let element: HTMLImageElement;
-        try {
-          element = await preloadImage(image.largeThumbnailUrl);
-        } catch {
-          continue; // Decode failed: skip immediately, fetch another.
+        const element = await preloadImage(image.largeThumbnailUrl).catch(() => null);
+        if (element === null) {
+          decodeFailures += 1;
+          if (decodeFailures >= DECODE_FAILURES_BEFORE_BACKOFF) await backOff();
+          continue;
         }
         if (cancelled) return;
 
         queue.push({ image, element });
         hasItem.open();
+        retryDelayMs = RETRY_DELAY_MS;
+        decodeFailures = 0;
       }
     })();
 
@@ -128,6 +150,7 @@ export default function Home() {
     (async function consume() {
       while (!cancelled) {
         while (!cancelled && queue.length === 0) await hasItem.wait();
+        while (!cancelled && isHidden()) await becameVisible.wait();
         if (cancelled) return;
 
         const entry = queue.shift()!;
@@ -150,8 +173,10 @@ export default function Home() {
     return () => {
       cancelled = true;
       controller.abort();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       hasItem.open(); // wake any waiting loop so it observes `cancelled`
       hasSpace.open();
+      becameVisible.open();
     };
   }, [hiddenKey]);
 

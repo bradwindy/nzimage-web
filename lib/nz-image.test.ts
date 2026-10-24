@@ -125,13 +125,13 @@ describe("fetchNZImage", () => {
     });
   });
 
-  it("joins a non-empty exclude list into the query string", async () => {
+  it("sends one exclude param per collection, so a comma in a name survives", async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValue({ ok: true, json: async () => validRaw });
 
-    await fetchNZImage({ exclude: ["a", "b"] });
+    await fetchNZImage({ exclude: ["a", "Te Toi Uku, Crown Lynn"] });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/image?exclude=a%2Cb", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/image?exclude=a&exclude=Te+Toi+Uku%2C+Crown+Lynn", {
       signal: undefined,
       cache: "no-store",
     });

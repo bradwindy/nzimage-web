@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "lint": "eslint .",
+    "typecheck:worker": "wrangler types worker/worker-configuration.d.ts && tsc -p worker",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage"
@@ -31,6 +33,7 @@
     "eslint-config-next": "16.4.0",
     "jsdom": "29.1.1",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "wrangler": "4.152.0"
   }
 }
