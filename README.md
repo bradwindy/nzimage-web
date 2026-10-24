@@ -66,13 +66,18 @@ until the `API` binding can reach `nzimages-api`, either:
 
 ## Deploying
 
+Workers Builds deploys every push to `main` (build `npm run build`, deploy `npx wrangler deploy`).
+By hand:
+
 ```bash
 npx wrangler login
 npm run deploy
 ```
 
 This builds `out/` and runs `wrangler deploy`. The `nzimages-api` Worker must already be
-deployed on the same account, since the service binding points at it.
+deployed on the same account, since the service binding points at it. The custom domain
+`nzimages.iolab.nz` can't be attached while another DNS record exists for that hostname, which
+is why the old Vercel CNAME was deleted when the site moved.
 
 ## Scripts
 
