@@ -109,6 +109,10 @@ export default function Home() {
     (async function produce() {
       let retryDelayMs = RETRY_DELAY_MS;
       let decodeFailures = 0;
+      const backOff = async () => {
+        await sleep(retryDelayMs, signal).catch(() => {});
+        retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
+      };
       while (!cancelled) {
         // Block while the queue is full; wake when the consumer frees a slot.
         while (!cancelled && queue.length >= QUEUE_SIZE) await hasSpace.wait();
@@ -122,14 +126,17 @@ export default function Home() {
         // Back off exponentially when the API fails, or when images keep failing to decode (their
         // host is down), so neither can burn the shared daily Worker request budget. An odd broken
         // thumbnail is skipped at once. Only a queued image resets the backoff.
-        const element = image && (await preloadImage(image.largeThumbnailUrl).catch(() => null));
-        if (image && !element) decodeFailures += 1;
-        if (!image || (!element && decodeFailures >= DECODE_FAILURES_BEFORE_BACKOFF)) {
-          await sleep(retryDelayMs, signal).catch(() => {});
-          retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
+        if (image === null) {
+          decodeFailures = 0;
+          await backOff();
           continue;
         }
-        if (!element) continue;
+        const element = await preloadImage(image.largeThumbnailUrl).catch(() => null);
+        if (element === null) {
+          decodeFailures += 1;
+          if (decodeFailures >= DECODE_FAILURES_BEFORE_BACKOFF) await backOff();
+          continue;
+        }
         if (cancelled) return;
 
         queue.push({ image, element });
