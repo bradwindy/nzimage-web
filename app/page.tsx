@@ -12,6 +12,7 @@ import { WelcomeModal } from "@/components/WelcomeModal";
 
 const RETRY_DELAY_MS = 1000; // first retry after a failure, doubling per consecutive failure
 const MAX_RETRY_DELAY_MS = 60_000;
+const DECODE_FAILURES_BEFORE_BACKOFF = 3; // a few broken thumbnails in a row are normal
 const QUEUE_SIZE = 5; // images buffered ahead of the one on screen
 const SLEEP_POLL_MS = 500; // granularity for picking up a shortened interval mid-wait
 
@@ -107,6 +108,7 @@ export default function Home() {
     // Producer: keep the queue filled to QUEUE_SIZE with decoded images.
     (async function produce() {
       let retryDelayMs = RETRY_DELAY_MS;
+      let decodeFailures = 0;
       while (!cancelled) {
         // Block while the queue is full; wake when the consumer frees a slot.
         while (!cancelled && queue.length >= QUEUE_SIZE) await hasSpace.wait();
@@ -117,20 +119,23 @@ export default function Home() {
           signal,
           exclude: settingsRef.current.hiddenCollections,
         }).catch(() => null);
-        // A failed fetch or an image that won't decode both back off exponentially, so a down API
-        // or image host can't burn the shared daily Worker request budget. Only a queued image
-        // resets the delay.
+        // Back off exponentially when the API fails, or when images keep failing to decode (their
+        // host is down), so neither can burn the shared daily Worker request budget. An odd broken
+        // thumbnail is skipped at once. Only a queued image resets the backoff.
         const element = image && (await preloadImage(image.largeThumbnailUrl).catch(() => null));
-        if (!image || !element) {
+        if (image && !element) decodeFailures += 1;
+        if (!image || (!element && decodeFailures >= DECODE_FAILURES_BEFORE_BACKOFF)) {
           await sleep(retryDelayMs, signal).catch(() => {});
           retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
           continue;
         }
+        if (!element) continue;
         if (cancelled) return;
 
         queue.push({ image, element });
         hasItem.open();
         retryDelayMs = RETRY_DELAY_MS;
+        decodeFailures = 0;
       }
     })();
 

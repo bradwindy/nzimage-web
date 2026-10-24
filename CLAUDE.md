@@ -51,9 +51,9 @@ Browser --GET /*------> Static Assets (out/)
   through to `env.ASSETS` (the 404 page).
 - `app/page.tsx` - `"use client"` component. A producer loop keeps a queue of up to 5 fetched
   and decoded (`img.decode()`) images, and a consumer loop shows the next one every
-  `settings.intervalMs`. A failed fetch, or an image that fails to decode, retries with
-  exponential backoff (1s doubling to 60s, back to 1s once an image is queued) to protect the
-  request budget. Both loops wait on a `becameVisible` gate while `document.visibilityState` is
+  `settings.intervalMs`. A failed fetch retries with exponential backoff (1s doubling to 60s,
+  back to 1s once an image is queued) to protect the request budget. An image that fails to
+  decode is skipped at once, but from the third failure in a row those back off too. Both loops wait on a `becameVisible` gate while `document.visibilityState` is
   `hidden`, so hidden tabs make no requests. Cleanup uses an `AbortController` plus a
   `cancelled` flag and opens every gate so the loops exit on unmount.
 - `lib/nz-image.ts` - the data boundary. The upstream returns **snake_case** JSON

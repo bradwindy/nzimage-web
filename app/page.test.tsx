@@ -117,7 +117,7 @@ describe("Home slideshow when /api/image fails", () => {
     await expectNextRetryAfter(1000);
   });
 
-  it("backs off when images fail to decode, not only when the fetch fails", async () => {
+  it("skips a few broken images at once, then backs off while they keep failing", async () => {
     vi.mocked(fetchNZImage).mockResolvedValue(image);
     const decode = vi
       .spyOn(HTMLImageElement.prototype, "decode")
@@ -125,7 +125,7 @@ describe("Home slideshow when /api/image fails", () => {
 
     renderWithSettings(<Home />);
     await advance(0);
-    expect(fetchNZImage).toHaveBeenCalledTimes(1);
+    expect(fetchNZImage).toHaveBeenCalledTimes(3); // first two failures skip with no wait
 
     for (const ms of [1000, 2000, 4000]) {
       await expectNextRetryAfter(ms);
