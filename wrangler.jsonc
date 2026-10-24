@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nzimages-web",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-24",
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+  "services": [{ "binding": "API", "service": "nzimages-api", "entrypoint": "ImageApi" }],
+  "routes": [{ "pattern": "nzimages.iolab.nz", "custom_domain": true }],
+  "workers_dev": false,
+  "observability": { "enabled": true }
+}

@@ -1,37 +1,44 @@
 # nzimage-web
 
 A full-screen slideshow of random New Zealand heritage images, built with Next.js
-(App Router).
+(App Router) and hosted on a Cloudflare Worker with Static Assets at
+[nzimages.iolab.nz](https://nzimages.iolab.nz).
 
 ## Architecture
 
-The browser never talks to the image API directly. It calls the same-origin route
-`GET /api/image` (`app/api/image/route.ts`), which runs server-side on Vercel, attaches
-the `secret` header required by the upstream Swift Lambda, and forwards the JSON
-response. This keeps the API secret out of the client bundle entirely — see
-`nzimageapi-lambda/docs/ACCESS-CONTROL.md` for why the lambda requires this.
+The site is a Next.js static export. `npm run build` writes it to `out/`, and Cloudflare
+serves those files as static assets without running any code. Only `/api/*` runs the
+Worker (`worker/index.ts`), which calls the `nzimages-api` Worker over an RPC service
+binding. The browser never talks to the image API directly, and the site holds no secret.
 
 ```
-Browser --GET /api/image--> Route Handler --GET {IMAGE_API_URL}/image, header: secret--> Lambda
+Browser --GET /api/*--> nzimages-web Worker --env.API.image() / collections()--> nzimages-api Worker
+Browser --GET /*------> Static Assets (out/)
 ```
+
+- `GET /api/image?exclude=a,b` calls `env.API.image({ exclude: ["a", "b"] })` and returns
+  the image JSON with `cache-control: no-store`. It returns 502 `Upstream error` when
+  `image()` returns `null`, and 502 `Upstream unreachable` when the call throws.
+- `GET /api/collections` returns `env.API.collections()` with `cache-control: max-age=3600`,
+  or 502 `Upstream unreachable`.
 
 `app/page.tsx` is a client component that polls `/api/image` in a loop, preloads each
-image (`img.decode()`) before swapping it in, and displays a new image roughly every
-10 seconds.
+image (`img.decode()`) before swapping it in, and shows a new one at the interval set in
+settings (30 seconds by default). Polling pauses while the tab is hidden.
 
-## Environment variables
+`wrangler.jsonc` holds the Worker config: the `out/` assets with a 404 page,
+`run_worker_first: ["/api/*"]`, the `API` service binding, and the `nzimages.iolab.nz`
+custom domain.
 
-Copy `.env.example` to `.env.local` and fill in:
+## Request budget
 
-- `IMAGE_API_URL` — base URL of the lambda's API Gateway (no trailing slash, no
-  `/image` suffix).
-- `NZIMAGE_API_SECRET` — a per-consumer secret provisioned in the lambda's
-  `ApiClientSecrets` (see `nzimageapi-lambda/docs/ACCESS-CONTROL.md` §5 for how the
-  lambda owner provisions one for this site). **Server-side only** — never prefix
-  these with `NEXT_PUBLIC_`.
-
-Both variables must also be set in the Vercel project (Production and Preview
-environments) for deployed builds.
+The Cloudflare account is on the Workers Free plan: 100,000 Worker requests a day, shared
+by every Worker on the account, and 10 ms CPU per request. Static asset requests are free
+and never run the Worker, so only `/api/*` calls count. A visible tab makes one
+`/api/image` call per image shown, so a tab left open all day at the 30 second default
+makes about 2,900. A hidden tab makes none. While `nzimages-api` is failing, a tab backs
+off its retries from 1 second, doubling up to 60 seconds, so a down API costs about 60
+requests an hour per tab.
 
 ## Local development
 
@@ -40,13 +47,39 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Images won't load until
-`NZIMAGE_API_SECRET` is a valid secret provisioned on the lambda side.
+`npm run dev` serves the UI at [http://localhost:3000](http://localhost:3000), but it has no
+`/api/*` routes, so images won't load. To run the full site:
+
+```bash
+npm run preview
+```
+
+This builds `out/` and serves it with `wrangler dev` at
+[http://localhost:8787](http://localhost:8787). `/api/*` returns 502 `Upstream unreachable`
+until the `API` binding can reach `nzimages-api`, either:
+
+- run `npx wrangler dev` in the `nzimages-api` repo at the same time. Wrangler's dev
+  registry connects the service binding, and `wrangler dev` lists it as `[connected]`.
+- or add `"remote": true` to the `API` service binding in `wrangler.jsonc` to call the
+  deployed Worker (needs `npx wrangler login`). Don't commit that change.
+
+## Deploying
+
+```bash
+npx wrangler login
+npm run deploy
+```
+
+This builds `out/` and runs `wrangler deploy`. The `nzimages-api` Worker must already be
+deployed on the same account, since the service binding points at it.
 
 ## Scripts
 
-- `npm run dev` — start the dev server
-- `npm run build` — production build
-- `npm run start` — run the production build
-- `npm run lint` — ESLint
-- `npm test` — run the Vitest suite once (use `npm run test:watch` for watch mode)
+- `npm run dev` - Next.js dev server, UI only
+- `npm run build` - static export to `out/`
+- `npm run preview` - build, then serve the Worker and assets locally with `wrangler dev`
+- `npm run deploy` - build, then `wrangler deploy`
+- `npm run lint` - ESLint
+- `npm run typecheck:worker` - generate Worker runtime types with `wrangler types`, then
+  type-check `worker/`
+- `npm test` - run the Vitest suite once (use `npm run test:watch` for watch mode)

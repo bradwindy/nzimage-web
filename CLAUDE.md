@@ -3,66 +3,86 @@
 ## What this is
 
 A single-page, full-screen slideshow of random New Zealand heritage images. Next.js 16
-(App Router), React 19, TypeScript, deployed on Vercel. One user-facing page (`app/page.tsx`)
+(App Router), React 19, TypeScript, built as a static export and hosted on a Cloudflare
+Worker with Static Assets (`nzimages.iolab.nz`). One user-facing page (`app/page.tsx`)
 backed by a client-side settings layer (`lib/settings*`, `components/`) and two API routes
-(`/api/image`, `/api/collections`); there is no database and no auth.
+(`/api/image`, `/api/collections`) served by a small Worker. There is no database and no auth.
 
 ## Commands
 
 ```bash
-npm run dev        # dev server at http://localhost:3000
-npm run build      # production build
-npm run start      # serve the production build
-npm run lint       # eslint (flat config, eslint.config.mjs)
-npm test           # run the Vitest suite once
-npm run test:watch # Vitest in watch mode
+npm run dev              # Next dev server at http://localhost:3000, UI only (no /api/*)
+npm run build            # static export to out/
+npm run preview          # build, then wrangler dev at http://localhost:8787 (Worker + assets)
+npm run deploy           # build, then wrangler deploy
+npm run lint             # eslint (flat config, eslint.config.mjs)
+npm run typecheck:worker # wrangler types, then tsc -p worker
+npm test                 # run the Vitest suite once
+npm run test:watch       # Vitest in watch mode
 ```
 
 Tests use Vitest (config in `vitest.config.mts`, setup in `vitest.setup.ts`). Pure logic in
-`lib/` is unit-tested (`lib/*.test.ts`); client components are tested with React Testing
-Library + jsdom (`components/*.test.tsx`). CI (`.github/workflows/test.yml`) runs lint, test,
-and build.
+`lib/` is unit-tested (`lib/*.test.ts`). Client components are tested with React Testing
+Library + jsdom (`components/*.test.tsx`, `app/page.test.tsx`). The Worker is tested in the
+node environment with a stubbed `API` binding (`worker/index.test.ts`). CI
+(`.github/workflows/test.yml`) runs lint, the Worker type-check, test, build, and
+`wrangler deploy --dry-run`.
 
-Images will not load in dev until `NZIMAGE_API_SECRET` holds a valid secret (see below).
+`/api/*` only works under `npm run preview`, and only once the `API` binding can reach
+`nzimages-api`: run `npx wrangler dev` in that repo too (the dev registry connects them), or
+temporarily set `"remote": true` on the binding to use the deployed Worker. Until then
+`/api/*` returns 502 `Upstream unreachable`.
 
 ## Architecture
 
-The one non-obvious thing to understand is the **secret-proxy pattern**. The browser never
-calls the upstream image API directly. The request chain is:
-
 ```
-Browser --GET /api/image--> Route Handler --GET {IMAGE_API_URL}/image, header: secret--> upstream Lambda
+Browser --GET /api/*--> nzimages-web Worker --env.API.image() / collections()--> nzimages-api Worker
+Browser --GET /*------> Static Assets (out/)
 ```
 
-- `app/api/image/route.ts` — server-side Route Handler. Reads `IMAGE_API_URL` and
-  `NZIMAGE_API_SECRET` from the environment, attaches `secret` as a request header, and
-  forwards the upstream JSON. This is the only place the secret is used, keeping it out of
-  the client bundle. Marked `dynamic = "force-dynamic"` with `cache: "no-store"` on both the
-  upstream fetch and the response so every call returns a fresh image.
-- `app/page.tsx` — `"use client"` component. A single async loop inside `useEffect` drives
-  the slideshow: fetch an image → preload it with `img.decode()` → swap it into state →
-  `sleep(10s)` → repeat. A failed fetch retries after 1s; an image that fails to decode is
-  skipped and a new one fetched immediately. Cleanup uses an `AbortController` plus a
-  `cancelled` flag so the loop stops on unmount.
-- `lib/nz-image.ts` — the data boundary. The upstream returns **snake_case** JSON
-  (`large_thumbnail_url`, `thumbnail_url`, `display_collection`); `parseNZImage` validates
+- `wrangler.jsonc` - `run_worker_first: ["/api/*"]` means only `/api/*` runs the Worker.
+  Everything else is served straight from `out/`, with `not_found_handling: "404-page"` serving
+  Next's `404.html` for unknown paths without running the Worker.
+- `worker/index.ts` - the Worker. Calls the `nzimages-api` Worker's `ImageApi` entrypoint over
+  an RPC service binding (`env.API`), so no secret or URL lives in this site. It returns the
+  upstream JSON unchanged (snake_case). `image()` returning `null` maps to 502
+  `Upstream error`, and an RPC exception maps to 502 `Upstream unreachable`. `/api/image` responses
+  are `cache-control: no-store`, and `/api/collections` is `max-age=3600`. Other `/api/*` paths fall
+  through to `env.ASSETS` (the 404 page).
+- `app/page.tsx` - `"use client"` component. A producer loop keeps a queue of up to 5 fetched
+  and decoded (`img.decode()`) images, and a consumer loop shows the next one every
+  `settings.intervalMs`. A failed fetch retries with exponential backoff (1s doubling to 60s,
+  back to 1s after the next successful fetch) to protect the request budget. An image that
+  fails to decode is skipped at once. Both loops wait on a `becameVisible` gate while `document.visibilityState` is
+  `hidden`, so hidden tabs make no requests. Cleanup uses an `AbortController` plus a
+  `cancelled` flag and opens every gate so the loops exit on unmount.
+- `lib/nz-image.ts` - the data boundary. The upstream returns **snake_case** JSON
+  (`large_thumbnail_url`, `thumbnail_url`, `display_collection`), and `parseNZImage` validates
   it and maps to the **camelCase** `NZImage` interface, returning `null` on anything
-  malformed. Keep validation here rather than in the component.
+  malformed. Keep validation here rather than in the component or the Worker.
 
-The upstream is a separate Swift Lambda project (`nzimageapi-lambda`, not in this repo, but should be in the same ~/Developer directory on the users machine).
-
-Its access-control contract — why the `secret` header is required and how per-consumer secrets
-are provisioned — lives in `nzimageapi-lambda/docs/ACCESS-CONTROL.md`.
+`nzimages-api` is a separate Worker on the same Cloudflare account, in its own repo. It must be
+deployed before this Worker, since the service binding points at it.
 
 ## Conventions and constraints
 
-- **Env vars are server-only.** `IMAGE_API_URL` and `NZIMAGE_API_SECRET` must never be
-  prefixed with `NEXT_PUBLIC_` — that would leak the secret into the browser bundle. Copy
-  `.env.example` to `.env.local` for local dev. Both must also be set in the Vercel project
-  (Production and Preview) for deployed builds.
+- **Workers Free plan budget.** 100,000 Worker requests a day, shared by the whole account,
+  and 10 ms CPU per request. Static asset requests are free. Every `/api/*` call counts, so
+  keep client polling lean (one `/api/image` call per image shown, nothing while hidden) and
+  keep the Worker a thin pass-through.
+- **Static export only.** `next.config.js` sets `output: "export"`. No Route Handlers,
+  middleware, rewrites, headers, server actions or other Next server features. Server logic
+  goes in `worker/index.ts`. Static asset headers go in `public/_headers` (it sets `immutable`
+  caching on `/_next/static/*`).
+- **Worker types are generated.** `worker/` has its own `tsconfig.json` using
+  `worker/worker-configuration.d.ts` from `wrangler types` (gitignored, regenerated by
+  `npm run typecheck:worker`). The root `tsconfig.json` excludes `worker/`, so `next build`
+  doesn't type-check it. The `API` binding's RPC methods are typed by hand (`ImageApi`), since
+  `wrangler types` only sees it as a plain `Service`. Re-run the script after changing
+  `wrangler.jsonc`.
 - **Images are unoptimized on purpose.** `next.config.js` sets `images.unoptimized: true`
   and `<Image>` uses the `unoptimized` prop, because the sources are arbitrary external
-  upstream thumbnail URLs. Don't re-enable Next image optimization for these.
+  upstream thumbnail URLs and a static export has no image optimizer.
 - Path alias `@/*` maps to the repo root (e.g. `@/lib/nz-image`).
-- `reactStrictMode` is on, so the `useEffect` loop runs twice in dev — the AbortController
+- `reactStrictMode` is on, so the `useEffect` loop runs twice in dev - the AbortController
   cleanup must keep working for that to be safe.

@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 
 // This setup file runs for both the default jsdom environment and the `node` environment used
-// by the API route handler tests (`@vitest-environment node`), so every DOM-only polyfill below
+// by the Worker tests (`@vitest-environment node`), so every DOM-only polyfill below
 // must be guarded — `window` doesn't exist in the node environment.
 if (typeof window !== "undefined") {
   // Provide a real in-memory localStorage. jsdom's is unreliable under Node 26 (its experimental
