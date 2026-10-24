@@ -10,7 +10,7 @@ import { SettingsRoot, type SettingsRootHandle } from "@/components/SettingsRoot
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { WelcomeModal } from "@/components/WelcomeModal";
 
-const RETRY_DELAY_MS = 1000; // first retry after a failed fetch, doubling per consecutive failure
+const RETRY_DELAY_MS = 1000; // first retry after a failure, doubling per consecutive failure
 const MAX_RETRY_DELAY_MS = 60_000;
 const QUEUE_SIZE = 5; // images buffered ahead of the one on screen
 const SLEEP_POLL_MS = 500; // granularity for picking up a shortened interval mid-wait
@@ -117,24 +117,20 @@ export default function Home() {
           signal,
           exclude: settingsRef.current.hiddenCollections,
         }).catch(() => null);
-        if (image === null) {
-          // Exponential backoff so a down API can't burn the shared daily Worker request budget.
+        // A failed fetch or an image that won't decode both back off exponentially, so a down API
+        // or image host can't burn the shared daily Worker request budget. Only a queued image
+        // resets the delay.
+        const element = image && (await preloadImage(image.largeThumbnailUrl).catch(() => null));
+        if (!image || !element) {
           await sleep(retryDelayMs, signal).catch(() => {});
           retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
           continue;
-        }
-        retryDelayMs = RETRY_DELAY_MS;
-
-        let element: HTMLImageElement;
-        try {
-          element = await preloadImage(image.largeThumbnailUrl);
-        } catch {
-          continue; // Decode failed: skip immediately, fetch another.
         }
         if (cancelled) return;
 
         queue.push({ image, element });
         hasItem.open();
+        retryDelayMs = RETRY_DELAY_MS;
       }
     })();
 

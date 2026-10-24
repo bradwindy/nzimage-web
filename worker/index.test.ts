@@ -35,12 +35,12 @@ describe("GET /api/image", () => {
     expect(image).toHaveBeenCalledExactlyOnceWith({});
   });
 
-  it("forwards a non-empty exclude param as an array", async () => {
+  it("forwards one exclude param per collection, keeping commas inside a name", async () => {
     image.mockResolvedValue({});
 
-    await get("/api/image?exclude=a,b");
+    await get("/api/image?exclude=a&exclude=Te%20Toi%20Uku%2C%20Crown%20Lynn");
 
-    expect(image).toHaveBeenCalledWith({ exclude: ["a", "b"] });
+    expect(image).toHaveBeenCalledWith({ exclude: ["a", "Te Toi Uku, Crown Lynn"] });
   });
 
   it("does not forward an empty exclude param", async () => {

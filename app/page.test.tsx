@@ -116,4 +116,20 @@ describe("Home slideshow when /api/image fails", () => {
 
     await expectNextRetryAfter(1000);
   });
+
+  it("backs off when images fail to decode, not only when the fetch fails", async () => {
+    vi.mocked(fetchNZImage).mockResolvedValue(image);
+    const decode = vi
+      .spyOn(HTMLImageElement.prototype, "decode")
+      .mockRejectedValue(new Error("image host down"));
+
+    renderWithSettings(<Home />);
+    await advance(0);
+    expect(fetchNZImage).toHaveBeenCalledTimes(1);
+
+    for (const ms of [1000, 2000, 4000]) {
+      await expectNextRetryAfter(ms);
+    }
+    decode.mockRestore();
+  });
 });

@@ -17,10 +17,12 @@ function json(body: unknown, status: number, cacheControl?: string): Response {
 }
 
 async function handleImage(api: ImageApi, url: URL): Promise<Response> {
-  const exclude = url.searchParams.get("exclude")?.split(",").filter(Boolean) ?? [];
+  // One `exclude` param per collection: names can contain commas ("Te Toi Uku, Crown Lynn and
+  // Clayworks Museum"), so a comma-joined list can't carry them.
+  const exclude = url.searchParams.getAll("exclude").filter(Boolean);
   try {
     const image = await api.image(exclude.length > 0 ? { exclude } : {});
-    if (image === null) return json({ error: "Upstream error" }, 502, NO_STORE);
+    if (image == null) return json({ error: "Upstream error" }, 502, NO_STORE);
     return json(image, 200, NO_STORE);
   } catch (error) {
     console.error("nzimages-api image() failed", error);

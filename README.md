@@ -16,7 +16,8 @@ Browser --GET /api/*--> nzimages-web Worker --env.API.image() / collections()-->
 Browser --GET /*------> Static Assets (out/)
 ```
 
-- `GET /api/image?exclude=a,b` calls `env.API.image({ exclude: ["a", "b"] })` and returns
+- `GET /api/image?exclude=a&exclude=b` (one param per hidden collection, since names can contain
+  commas) calls `env.API.image({ exclude: ["a", "b"] })` and returns
   the image JSON with `cache-control: no-store`. It returns 502 `Upstream error` when
   `image()` returns `null`, and 502 `Upstream unreachable` when the call throws.
 - `GET /api/collections` returns `env.API.collections()` with `cache-control: max-age=3600`,
