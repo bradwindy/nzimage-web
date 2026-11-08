@@ -5,7 +5,8 @@
   "timezone": "Pacific/Auckland",
   "schedule": ["before 9am on monday"],
   "osvVulnerabilityAlerts": true,
-  "rebaseWhen": "conflicted",
+  "rebaseWhen": "behind-base-branch",
+  "platformAutomerge": false,
   "prConcurrentLimit": 10,
   "abandonmentThreshold": null,
   "lockFileMaintenance": {
@@ -24,6 +25,11 @@
     {
       "description": "Auto-open PRs for major updates; review manually",
       "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "0.x updates can break on any bump, so they stay manual.",
+      "matchCurrentVersion": "/^v?[~^]?0\\./",
       "automerge": false
     },
     {
