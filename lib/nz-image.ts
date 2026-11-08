@@ -11,6 +11,16 @@ export interface NZImage {
   subject?: string[];
 }
 
+function isHttpUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function parseOptionalStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   if (!value.every((v) => typeof v === "string")) return undefined;
@@ -23,7 +33,7 @@ export function parseNZImage(data: unknown): NZImage | null {
   if (
     typeof o.id !== "number" ||
     typeof o.title !== "string" ||
-    typeof o.large_thumbnail_url !== "string" ||
+    !isHttpUrl(o.large_thumbnail_url) ||
     typeof o.thumbnail_url !== "string"
   ) {
     return null;
@@ -36,7 +46,7 @@ export function parseNZImage(data: unknown): NZImage | null {
     description: typeof o.description === "string" ? o.description : undefined,
     displayCollection:
       typeof o.display_collection === "string" ? o.display_collection : undefined,
-    landingUrl: typeof o.landing_url === "string" ? o.landing_url : undefined,
+    landingUrl: isHttpUrl(o.landing_url) ? o.landing_url : undefined,
     creator: parseOptionalStringArray(o.creator),
     date: parseOptionalStringArray(o.date),
     subject: parseOptionalStringArray(o.subject),

@@ -10,12 +10,12 @@
   "abandonmentThreshold": null,
   "lockFileMaintenance": {
     "enabled": true,
-    "automerge": true,
+    "automerge": false,
     "schedule": ["before 6am on monday"]
   },
   "packageRules": [
     {
-      "description": "Auto-merge minor/patch PRs when CI passes (7-day wait, stricter than the 3-day default)",
+      "description": "Auto-merge minor/patch PRs when CI passes (7-day wait, stricter than the 3-day default). Lock file maintenance has no such wait for the versions it moves, so it is not automerged.",
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "automergeType": "pr",

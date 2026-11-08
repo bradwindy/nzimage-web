@@ -14,7 +14,7 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "next": "^16.2.10",
+    "next": "^16.4.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
@@ -30,10 +30,10 @@
     "@vitejs/plugin-react": "6.1.2",
     "@vitest/coverage-v8": "4.1.12",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.5",
     "jsdom": "29.1.1",
     "typescript": "6.0.3",
     "vitest": "4.1.12",
-    "wrangler": "4.152.0"
+    "wrangler": "4.158.0"
   }
 }
