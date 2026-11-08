@@ -6,6 +6,7 @@
   "schedule": ["before 9am on monday"],
   "osvVulnerabilityAlerts": true,
   "rebaseWhen": "behind-base-branch",
+  "platformAutomerge": false,
   "prConcurrentLimit": 10,
   "abandonmentThreshold": null,
   "lockFileMaintenance": {
@@ -27,9 +28,8 @@
       "automerge": false
     },
     {
-      "description": "0.x minors can break, so they stay manual.",
+      "description": "0.x updates can break on any bump, so they stay manual.",
       "matchCurrentVersion": "/^v?[~^]?0\\./",
-      "matchUpdateTypes": ["minor"],
       "automerge": false
     },
     {
