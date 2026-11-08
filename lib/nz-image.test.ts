@@ -37,6 +37,26 @@ describe("parseNZImage", () => {
     expect(parseNZImage(raw)).toBeNull();
   });
 
+  it.each(["data:image/svg+xml,<svg/>", "javascript:alert(1)", "not a url"])(
+    "returns null when large_thumbnail_url is not an http(s) URL: %s",
+    (large_thumbnail_url) => {
+      expect(parseNZImage({ ...validRaw, large_thumbnail_url })).toBeNull();
+    },
+  );
+
+  it.each(["javascript:alert(1)", "data:text/html,<script>alert(1)</script>", "//evil.example/x"])(
+    "drops a landing_url that is not an absolute http(s) URL: %s",
+    (landing_url) => {
+      expect(parseNZImage({ ...validRaw, landing_url })?.landingUrl).toBeUndefined();
+    },
+  );
+
+  it("keeps plain http URLs, which some institutions still serve", () => {
+    const image = parseNZImage({ ...validRaw, landing_url: "http://example.com/x", large_thumbnail_url: "http://example.com/l.jpg" });
+    expect(image?.landingUrl).toBe("http://example.com/x");
+    expect(image?.largeThumbnailUrl).toBe("http://example.com/l.jpg");
+  });
+
   it("maps snake_case fields to camelCase on success", () => {
     expect(parseNZImage(validRaw)).toEqual({
       id: 1,
