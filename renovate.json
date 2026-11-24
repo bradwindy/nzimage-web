@@ -10,13 +10,16 @@
   "prConcurrentLimit": 10,
   "abandonmentThreshold": null,
   "lockFileMaintenance": {
+    "description": "With minimumReleaseAge set here, Renovate refreshes the lock with npm install --before=<7 days ago>, so it only moves to versions at least 7 days old. A lock refresh has no single release date, so timestamp-optional stops the stability check waiting forever. If --before fails (a locked package is newer than the cutoff), Renovate retries without it and notes that in the PR, so this stays manual-merge.",
     "enabled": true,
     "automerge": false,
+    "minimumReleaseAge": "7 days",
+    "minimumReleaseAgeBehaviour": "timestamp-optional",
     "schedule": ["before 6am on monday"]
   },
   "packageRules": [
     {
-      "description": "Auto-merge minor/patch PRs when CI passes (7-day wait, stricter than the 3-day default). Lock file maintenance has no such wait for the versions it moves, so it is not automerged.",
+      "description": "Auto-merge minor/patch PRs when CI passes (7-day wait, stricter than the 3-day default). Lock file maintenance has its own 7-day limit above and stays manual-merge (see its description).",
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "automergeType": "pr",
