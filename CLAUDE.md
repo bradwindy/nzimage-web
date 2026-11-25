@@ -4,7 +4,8 @@
 
 A single-page, full-screen slideshow of random New Zealand heritage images. Next.js 16
 (App Router), React 19, TypeScript, built as a static export and hosted on a Cloudflare
-Worker with Static Assets (`nzimages.iolab.nz`). One user-facing page (`app/page.tsx`)
+Worker with Static Assets (`nzimages.windybank.net`, and the old `nzimages.iolab.nz` until that
+domain lapses on 2027-01-22: remove its route from `wrangler.jsonc` before then). One user-facing page (`app/page.tsx`)
 backed by a client-side settings layer (`lib/settings*`, `components/`) and two API routes
 (`/api/image`, `/api/collections`) served by a small Worker. There is no database and no auth.
 
