@@ -2,7 +2,7 @@
 
 A full-screen slideshow of random New Zealand heritage images, built with Next.js
 (App Router) and hosted on a Cloudflare Worker with Static Assets at
-[nzimages.iolab.nz](https://nzimages.iolab.nz).
+[nzimages.windybank.net](https://nzimages.windybank.net).
 
 ## Architecture
 
@@ -28,8 +28,8 @@ image (`img.decode()`) before swapping it in, and shows a new one at the interva
 settings (30 seconds by default). Polling pauses while the tab is hidden.
 
 `wrangler.jsonc` holds the Worker config: the `out/` assets with a 404 page,
-`run_worker_first: ["/api/*"]`, the `API` service binding, and the `nzimages.iolab.nz`
-custom domain.
+`run_worker_first: ["/api/*"]`, the `API` service binding, and the `nzimages.windybank.net`
+custom domain (plus the old `nzimages.iolab.nz` until that domain lapses, see Deploying).
 
 ## Request budget
 
@@ -75,9 +75,11 @@ npm run deploy
 ```
 
 This builds `out/` and runs `wrangler deploy`. The `nzimages-api` Worker must already be
-deployed on the same account, since the service binding points at it. The custom domain
-`nzimages.iolab.nz` can't be attached while another DNS record exists for that hostname, which
-is why the old Vercel CNAME was deleted when the site moved.
+deployed on the same account, since the service binding points at it. A custom domain
+can't be attached while another DNS record exists for that hostname, which is why the old Vercel
+CNAME for `nzimages.iolab.nz` was deleted when the site moved to Workers. Until `iolab.nz` lapses
+on 2027-01-22 the site also answers on `nzimages.iolab.nz` (the second route in `wrangler.jsonc`).
+Remove that route before then.
 
 ## Scripts
 
